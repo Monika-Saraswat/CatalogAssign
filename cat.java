@@ -1,5 +1,5 @@
-import java.util.ArrayList;
-import java.util.List;
+import org.json.JSONObject;
+import java.util.*;
 
 public class Main {
 
@@ -63,13 +63,26 @@ public class Main {
         return ans.num;  // Return the constant term (secret)
     }
 
+    // Function to convert a number in a given base to decimal
+    public static int convertToDecimal(String value, int base) {
+        return Integer.parseInt(value, base);
+    }
+
     // Function to simulate secret sharing
-    public static void operation(int N, int K, List<int[]> points) {
+    public static void operation(int N, int K, Map<Integer, Map<String, String>> points) {
         System.out.println("Secret is divided into " + N + " Parts:");
 
-        // Display the points (x, f(x)) representing the secret parts
-        for (int i = 0; i < N; ++i) {
-            System.out.println(points.get(i)[0] + " " + points.get(i)[1]);
+        List<int[]> pointList = new ArrayList<>();
+
+        // Parse points from the JSON-like input
+        for (int i = 1; i <= N; i++) {
+            Map<String, String> pointData = points.get(i);
+            String baseStr = pointData.get("base");
+            String valueStr = pointData.get("value");
+            int base = Integer.parseInt(baseStr);
+            int value = convertToDecimal(valueStr, base);
+            pointList.add(new int[]{i, value});  // Store as (x, f(x))
+            System.out.println(i + " -> " + value);  // Print (x, f(x))
         }
 
         // We can reconstruct the secret from any K parts (minimum threshold)
@@ -89,8 +102,8 @@ public class Main {
 
         // Copy M points from the given list of points to arrays
         for (int i = 0; i < M; ++i) {
-            x[i] = points.get(i)[0];
-            y[i] = points.get(i)[1];
+            x[i] = pointList.get(i)[0];
+            y[i] = pointList.get(i)[1];
         }
 
         // Reconstruct the secret (constant term) using Lagrange interpolation
@@ -98,19 +111,29 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        // Example parameters: 4 parts, minimum 2 parts to reconstruct the secret
-        int N = 4; // Number of parts to divide the secret
-        int K = 3; // Minimum number of parts required to reconstruct the secret
+        // Example JSON input as a string
+        String jsonString = "{"
+            + "\"keys\": {\"n\": 4, \"k\": 3},"
+            + "\"1\": {\"base\": \"10\", \"value\": \"4\"},"
+            + "\"2\": {\"base\": \"2\", \"value\": \"111\"},"
+            + "\"3\": {\"base\": \"10\", \"value\": \"12\"},"
+            + "\"6\": {\"base\": \"4\", \"value\": \"213\"}"
+            + "}";
 
-        // List of points (x, f(x)) based on polynomial evaluations
-        // Here, each pair represents (x, f(x)) i.e., (x, secret or polynomial value)
-        List<int[]> points = new ArrayList<>();
-        points.add(new int[]{1, 80});  // f(1) = 10
-        points.add(new int[]{2, 95});  // f(2) = 20
-        points.add(new int[]{3, 110});  // f(3) = 30
-        points.add(new int[]{4, 125});  // f(4) = 40
+       
+        JSONObject jsonObject = new JSONObject(jsonString);
+        Map<Integer, Map<String, String>> points = new HashMap<>();
 
-        // Perform the secret sharing operation
+        
+        int N = jsonObject.getJSONObject("keys").getInt("n");
+        int K = jsonObject.getJSONObject("keys").getInt("k");
+
+       
+        for (int i = 1; i <= N; i++) {
+            points.put(i, jsonObject.getJSONObject(String.valueOf(i)).toMap());
+        }
+
+       
         operation(N, K, points);
     }
 }
